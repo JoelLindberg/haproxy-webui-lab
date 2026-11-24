@@ -1,0 +1,139 @@
+{% load humanize %}
+{% if error %}
+  <div role="alert" class="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800/70 dark:bg-amber-950/50 dark:text-amber-200">
+    <p class="font-semibold">Live statistics temporarily unavailable</p>
+    <p class="text-xs mt-1 opacity-90">{{ error }}</p>
+  </div>
+{% elif stats %}
+  <!-- KPI Cards -->
+  <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 mb-5">
+    <div class="rounded-xl border border-slate-200 dark:border-slate-800 p-4 bg-slate-50/70 dark:bg-slate-900/60">
+      <p class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Backends UP</p>
+      <p class="mt-1.5 text-2xl font-bold text-slate-900 dark:text-slate-100">
+        {{ stats.backends_up }} <span class="text-sm font-normal text-slate-500">/ {{ stats.backends_total }}</span>
+      </p>
+      <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Updated {{ stats.updated_at }}</p>
+    </div>
+
+    <div class="rounded-xl border border-slate-200 dark:border-slate-800 p-4 bg-slate-50/70 dark:bg-slate-900/60">
+      <p class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Servers Online</p>
+      <p class="mt-1.5 text-2xl font-bold text-slate-900 dark:text-slate-100">
+        {{ stats.servers_up }} <span class="text-sm font-normal text-slate-500">/ {{ stats.servers_total }}</span>
+      </p>
+      <div class="mt-1 flex flex-wrap gap-1.5 text-[11px]">
+        {% if stats.servers_drain > 0 %}
+          <span class="badge-state-drain">{{ stats.servers_drain }} drain</span>
+        {% endif %}
+        {% if stats.servers_maint > 0 %}
+          <span class="badge-state-maint">{{ stats.servers_maint }} maint</span>
+        {% endif %}
+        {% if stats.servers_down > 0 %}
+          <span class="badge-status-down">{{ stats.servers_down }} down</span>
+        {% endif %}
+        {% if stats.servers_drain == 0 and stats.servers_maint == 0 and stats.servers_down == 0 %}
+          <span class="text-emerald-600 dark:text-emerald-400 font-medium">All healthy</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="rounded-xl border border-slate-200 dark:border-slate-800 p-4 bg-slate-50/70 dark:bg-slate-900/60">
+      <p class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Active Sessions</p>
+      <p class="mt-1.5 text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+        {{ stats.current_sessions|intcomma }}
+      </p>
+      <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+        Rate: <strong class="text-slate-700 dark:text-slate-200">{{ stats.session_rate }}/s</strong> (peak {{ stats.max_session_rate }}/s)
+      </p>
+    </div>
+
+    <div class="rounded-xl border border-slate-200 dark:border-slate-800 p-4 bg-slate-50/70 dark:bg-slate-900/60">
+      <p class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Queued Requests</p>
+      <p class="mt-1.5 text-2xl font-bold {% if stats.queued_connections > 0 %}text-amber-600 dark:text-amber-400{% else %}text-emerald-600 dark:text-emerald-400{% endif %}">
+        {{ stats.queued_connections|intcomma }}
+      </p>
+      <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+        Errors: <strong class="{% if stats.errors_total > 0 %}text-rose-600 dark:text-rose-400{% else %}text-slate-700 dark:text-slate-200{% endif %}">{{ stats.errors_total|intcomma }}</strong>
+      </p>
+    </div>
+
+    <div class="rounded-xl border border-slate-200 dark:border-slate-800 p-4 bg-slate-50/70 dark:bg-slate-900/60 col-span-2 md:col-span-1">
+      <p class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Traffic</p>
+      <p class="mt-1.5 text-2xl font-bold text-slate-900 dark:text-slate-100">
+        {{ stats.bytes_out_human }}
+      </p>
+      <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+        In: {{ stats.bytes_in_human }} · {{ stats.total_sessions|intcomma }} sess
+      </p>
+    </div>
+  </div>
+
+  {% if stats.http_2xx or stats.http_4xx or stats.http_5xx %}
+    <div class="flex flex-wrap items-center gap-3 mb-4 text-xs">
+      <span class="font-semibold text-slate-600 dark:text-slate-400">HTTP Responses:</span>
+      <span class="rounded-md bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 px-2.5 py-1 font-medium">2xx: {{ stats.http_2xx|intcomma }}</span>
+      <span class="rounded-md bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 px-2.5 py-1 font-medium">4xx: {{ stats.http_4xx|intcomma }}</span>
+      <span class="rounded-md bg-rose-100 dark:bg-rose-950/70 text-rose-800 dark:text-rose-300 px-2.5 py-1 font-medium">5xx: {{ stats.http_5xx|intcomma }}</span>
+    </div>
+  {% endif %}
+
+  {% if stats.servers %}
+    <div tabindex="0" role="region" aria-labelledby="live-servers-table-caption" class="table-wrapper rounded-xl border border-slate-200 dark:border-slate-800">
+      <table
+        class="responsive-data-table w-full text-sm text-left"
+        style="--label-2: 'Backend'; --label-3: 'Status'; --label-4: 'Admin State'; --label-5: 'Active'; --label-6: 'Rate'; --label-7: 'Queued'; --label-8: 'Total'; --label-9: 'Traffic Out'; --label-10: 'Avg Resp';"
+      >
+        <caption id="live-servers-table-caption" class="sr-only">Live per-server traffic and health statistics</caption>
+        <thead class="text-xs uppercase bg-slate-100 dark:bg-slate-800/90 text-slate-600 dark:text-slate-300">
+          <tr>
+            <th scope="col" class="px-4 py-2.5 font-semibold">Server</th>
+            <th scope="col" class="px-4 py-2.5 font-semibold">Backend</th>
+            <th scope="col" class="px-4 py-2.5 font-semibold">Status</th>
+            <th scope="col" class="px-4 py-2.5 font-semibold">State</th>
+            <th scope="col" class="px-4 py-2.5 font-semibold text-right">Active</th>
+            <th scope="col" class="px-4 py-2.5 font-semibold text-right">Rate /s</th>
+            <th scope="col" class="px-4 py-2.5 font-semibold text-right">Queue</th>
+            <th scope="col" class="px-4 py-2.5 font-semibold text-right">Total Sess</th>
+            <th scope="col" class="px-4 py-2.5 font-semibold text-right">Out</th>
+            <th scope="col" class="px-4 py-2.5 font-semibold text-right">Resp (ms)</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+          {% for srv in stats.servers %}
+            <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+              <th scope="row" class="px-4 py-2.5 font-mono font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap">
+                {{ srv.name }}
+              </th>
+              <td class="px-4 py-2.5 font-mono text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                {{ srv.backend }}
+              </td>
+              <td class="px-4 py-2.5 whitespace-nowrap">
+                {% if srv.operational_state == "up" %}
+                  <span class="badge-status-up">UP</span>
+                {% elif srv.operational_state == "stopping" %}
+                  <span class="badge-status-stopping">STOPPING</span>
+                {% else %}
+                  <span class="badge-status-down">DOWN</span>
+                {% endif %}
+              </td>
+              <td class="px-4 py-2.5 whitespace-nowrap">
+                {% if srv.admin_state == "ready" %}
+                  <span class="badge-state-ready">READY</span>
+                {% elif srv.admin_state == "drain" %}
+                  <span class="badge-state-drain">DRAIN</span>
+                {% else %}
+                  <span class="badge-state-maint">MAINT</span>
+                {% endif %}
+              </td>
+              <td class="px-4 py-2.5 text-right font-mono font-semibold">{{ srv.current_sessions|intcomma }}</td>
+              <td class="px-4 py-2.5 text-right font-mono">{{ srv.session_rate }}/s</td>
+              <td class="px-4 py-2.5 text-right font-mono {% if srv.queued_connections > 0 %}text-amber-600 dark:text-amber-400 font-bold{% endif %}">{{ srv.queued_connections|intcomma }}</td>
+              <td class="px-4 py-2.5 text-right font-mono">{{ srv.total_sessions|intcomma }}</td>
+              <td class="px-4 py-2.5 text-right font-mono whitespace-nowrap">{{ srv.bytes_out_human }}</td>
+              <td class="px-4 py-2.5 text-right font-mono">{{ srv.response_time_ms }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+{% endif %}

@@ -1,0 +1,24 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>{% block title %}HAProxy Web UI{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <script src="{% static 'js/htmx.min.js' %}" defer></script>
+  <script src="{% static 'js/alpine.min.js' %}" defer></script>
+  <script type="module">
+    if (!('commandForElement' in HTMLButtonElement.prototype)) {
+      import('https://esm.run/invokers-polyfill').catch(() => {});
+    }
+  </script>
+</head>
+<body
+  class="min-h-screen antialiased selection:bg-indigo-500 selection:text-white"
+  hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+>
+  {% block body %}{% endblock %}
+</body>
+</html>

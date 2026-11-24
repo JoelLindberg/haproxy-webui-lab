@@ -1,0 +1,52 @@
+{% load humanize %}
+{% if error %}
+  <div class="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-xs text-amber-900 dark:border-amber-800/70 dark:bg-amber-950/50 dark:text-amber-200">
+    {{ error }}
+  </div>
+{% elif metrics %}
+  <div tabindex="0" role="region" aria-labelledby="prom-summary-heading" class="table-wrapper rounded-xl border border-slate-200 dark:border-slate-800">
+    <table
+      class="responsive-data-table w-full text-xs text-left"
+      style="--label-2: 'Type'; --label-3: 'Current'; --label-4: 'Max'; --label-5: 'Total'; --label-6: 'Rate';"
+    >
+      <thead class="uppercase bg-slate-100 dark:bg-slate-800/90 text-slate-600 dark:text-slate-300">
+        <tr>
+          <th scope="col" class="px-3 py-2.5 font-semibold">Proxy</th>
+          <th scope="col" class="px-3 py-2.5 font-semibold">Type</th>
+          <th scope="col" class="px-3 py-2.5 font-semibold text-right">Current</th>
+          <th scope="col" class="px-3 py-2.5 font-semibold text-right">Max</th>
+          <th scope="col" class="px-3 py-2.5 font-semibold text-right">Total</th>
+          <th scope="col" class="px-3 py-2.5 font-semibold text-right">Rate</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+        {% for row in metrics.proxy_rows %}
+          <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+            <th scope="row" class="px-3 py-2.5 font-mono font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap">
+              {{ row.name }}
+            </th>
+            <td class="px-3 py-2.5 whitespace-nowrap">
+              {% if row.type == "frontend" %}
+                <span class="rounded bg-sky-100 dark:bg-sky-950 text-sky-800 dark:text-sky-300 px-2 py-0.5 font-semibold">frontend</span>
+              {% else %}
+                <span class="rounded bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 px-2 py-0.5 font-semibold">backend</span>
+              {% endif %}
+            </td>
+            <td class="px-3 py-2.5 text-right font-mono font-semibold">{{ row.current_sessions|intcomma }}</td>
+            <td class="px-3 py-2.5 text-right font-mono">{{ row.max_sessions|intcomma }}</td>
+            <td class="px-3 py-2.5 text-right font-mono">{{ row.total_sessions|intcomma }}</td>
+            <td class="px-3 py-2.5 text-right font-mono">{{ row.session_rate }}</td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="6" class="px-3 py-6 text-center text-slate-500">No session metrics reported</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <p class="mt-3 text-xs text-slate-500 dark:text-slate-400">
+    Metric families: <strong>{{ metrics.metrics_count }}</strong> · Payload size: <strong>{{ metrics.raw_kb }} KB</strong>
+  </p>
+{% endif %}

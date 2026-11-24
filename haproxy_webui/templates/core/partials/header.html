@@ -1,0 +1,35 @@
+<header class="surface-card rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800 px-6 py-5 mb-6 flex flex-wrap items-center justify-between gap-4">
+  <div class="flex items-center gap-4">
+    <a href="{% url 'dashboard' %}" class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-indigo-600 text-white font-bold text-sm shadow-sm hover:bg-indigo-500 transition">
+      HA
+    </a>
+    <div>
+      <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+        <a href="{% url 'dashboard' %}" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition">HAProxy Admin</a>
+      </h1>
+      <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+        Signed in as <span class="font-medium text-slate-700 dark:text-slate-200">{{ request.user.email|default:request.user.username }}</span>
+      </p>
+    </div>
+  </div>
+
+  <div class="flex items-center gap-3">
+    {% if request.user.is_staff %}
+      <a
+        href="/django-admin/"
+        class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 dark:border-slate-700 px-3.5 py-2 text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+      >
+        Users &amp; DB Admin
+      </a>
+    {% endif %}
+    <form method="post" action="{% url 'logout' %}">
+      {% csrf_token %}
+      <button
+        type="submit"
+        class="inline-flex items-center rounded-lg bg-rose-600 px-4 py-2 text-xs sm:text-sm font-semibold text-white shadow-sm hover:bg-rose-500 transition cursor-pointer"
+      >
+        Logout
+      </button>
+    </form>
+  </div>
+</header>

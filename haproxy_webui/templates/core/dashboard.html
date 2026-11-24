@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard · HAProxy Admin{% endblock %}
+
+{% block body %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  {% include "core/partials/header.html" %}
+
+  {% if messages %}
+    <div class="mb-6 space-y-2">
+      {% for message in messages %}
+        <div
+          x-data="{ open: true }"
+          x-show="open"
+          role="status"
+          class="flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium border {% if message.tags == 'error' %}border-red-300 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/60 dark:text-red-200{% else %}border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200{% endif %}"
+        >
+          <span>{{ message }}</span>
+          <button type="button" @click="open = false" class="ml-4 text-xs opacity-70 hover:opacity-100 cursor-pointer" aria-label="Dismiss notification">✕</button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <!-- Live Cluster & Server Traffic Statistics (replaces realtime graph) -->
+  <section
+    x-data="{ livePolling: true }"
+    aria-labelledby="live-stats-heading"
+    class="surface-card rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800 p-6 mb-6"
+  >
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+      <div class="flex items-center gap-3">
+        <h2 id="live-stats-heading" class="text-lg font-bold text-slate-900 dark:text-slate-100">
+          Live Traffic &amp; Health Statistics
+        </h2>
+        <span
+          class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium"
+          :class="livePolling ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300'"
+        >
+          <span class="w-2 h-2 rounded-full" :class="livePolling ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'"></span>
+          <span x-text="livePolling ? 'Live (5s)' : 'Paused'">Live (5s)</span>
+        </span>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          @click="livePolling = !livePolling"
+          class="rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+          x-text="livePolling ? 'Pause Auto-Refresh' : 'Resume Auto-Refresh'"
+        >
+          Pause Auto-Refresh
+        </button>
+        <button
+          type="button"
+          hx-get="{% url 'partial_live_stats' %}"
+          hx-target="#live-stats-container"
+          hx-indicator="#live-stats-spinner"
+          class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+          title="Refresh live statistics now"
+        >
+          <span id="live-stats-spinner" class="htmx-indicator animate-spin">↻</span>
+          <span>Refresh</span>
+        </button>
+      </div>
+    </div>
+
+    <div
+      id="live-stats-container"
+      hx-get="{% url 'partial_live_stats' %}"
+      hx-trigger="load, every 5s [livePolling && !document.hidden], backendsChanged from:body"
+    >
+      <div class="py-8 text-center text-sm text-slate-500 dark:text-slate-400">
+        Loading live HAProxy statistics…
+      </div>
+    </div>
+  </section>
+
+  <!-- Backends & Create Backend -->
+  <div id="backends-and-create">
+    {% include "core/partials/create_backend_and_list.html" %}
+  </div>
+
+  <!-- Diagnostics & Prometheus Summary Grid -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+    <!-- Diagnostics Card -->
+    <section aria-labelledby="diagnostics-heading" class="surface-card rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800 p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 id="diagnostics-heading" class="text-lg font-bold text-slate-900 dark:text-slate-100">
+          Diagnostics
+        </h2>
+        <button
+          type="button"
+          hx-get="{% url 'partial_diagnostics' %}"
+          hx-target="#diagnostics-container"
+          class="rounded-lg border border-slate-300 dark:border-slate-700 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+          title="Refresh diagnostics"
+        >
+          ↻ Refresh
+        </button>
+      </div>
+
+      <div
+        id="diagnostics-container"
+        hx-get="{% url 'partial_diagnostics' %}"
+        hx-trigger="load"
+      >
+        <div class="py-6 text-center text-sm text-slate-500 dark:text-slate-400">
+          Loading diagnostics…
+        </div>
+      </div>
+
+      <div class="mt-5 pt-4 border-t border-slate-200 dark:border-slate-800">
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-xs text-slate-500 dark:text-slate-400">Verify Data Plane API connectivity</span>
+          <button
+            type="button"
+            hx-post="{% url 'partial_ping' %}"
+            hx-target="#ping-output"
+            class="inline-flex items-center gap-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white px-3.5 py-1.5 text-xs font-semibold transition cursor-pointer"
+          >
+            Ping Data Plane API
+          </button>
+        </div>
+        <div id="ping-output"></div>
+      </div>
+    </section>
+
+    <!-- Prometheus Proxy Session Metrics Card -->
+    <section aria-labelledby="prom-summary-heading" class="surface-card rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800 p-6">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 id="prom-summary-heading" class="text-lg font-bold text-slate-900 dark:text-slate-100">
+            Prometheus Session Metrics
+          </h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Scraped from HAProxy built-in exporter · updates every 15s</p>
+        </div>
+        <button
+          type="button"
+          hx-get="{% url 'partial_metrics_summary' %}"
+          hx-target="#metrics-summary-container"
+          class="rounded-lg border border-slate-300 dark:border-slate-700 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+          title="Refresh Prometheus metrics"
+        >
+          ↻ Refresh
+        </button>
+      </div>
+
+      <div
+        id="metrics-summary-container"
+        hx-get="{% url 'partial_metrics_summary' %}"
+        hx-trigger="load, every 15s [!document.hidden]"
+      >
+        <div class="py-6 text-center text-sm text-slate-500 dark:text-slate-400">
+          Loading Prometheus metrics…
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Raw Prometheus Metrics Explorer -->
+  <section aria-labelledby="prom-explorer-heading" class="surface-card rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800 p-6 mt-6">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <div>
+        <h2 id="prom-explorer-heading" class="text-lg font-bold text-slate-900 dark:text-slate-100">
+          Prometheus Metrics Explorer
+        </h2>
+        <p class="text-xs text-slate-500 dark:text-slate-400">Filter and inspect raw HAProxy Prometheus metric families and label samples</p>
+      </div>
+      <button
+        type="button"
+        hx-get="{% url 'partial_metrics_raw' %}"
+        hx-target="#metrics-raw-container"
+        class="rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+      >
+        ↻ Reload Exporter Snapshot
+      </button>
+    </div>
+
+    <div
+      id="metrics-raw-container"
+      hx-get="{% url 'partial_metrics_raw' %}"
+      hx-trigger="load"
+    >
+      <div class="py-6 text-center text-sm text-slate-500 dark:text-slate-400">
+        Loading metric families…
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}

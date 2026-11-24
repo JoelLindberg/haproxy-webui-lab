@@ -1,0 +1,56 @@
+{% if error %}
+  <div class="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-xs text-amber-900 dark:border-amber-800/70 dark:bg-amber-950/50 dark:text-amber-200">
+    {{ error }}
+  </div>
+{% elif metrics %}
+  <div x-data="{ query: '' }">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+      <div class="flex-1 min-w-[240px]">
+        <label for="metrics-filter-input" class="sr-only">Filter metrics by name or description</label>
+        <input
+          id="metrics-filter-input"
+          type="search"
+          x-model="query"
+          placeholder="Filter {{ metrics.metrics_count }} metric families by name or description…"
+          class="form-input-field"
+        >
+      </div>
+      <div class="text-xs text-slate-500 dark:text-slate-400">
+        Total families: <strong>{{ metrics.metrics_count }}</strong> · Raw size: <strong>{{ metrics.raw_kb }} KB</strong>
+      </div>
+    </div>
+
+    <div class="max-h-[460px] overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-800 divide-y divide-slate-200 dark:divide-slate-800">
+      {% for family in metrics.families %}
+        <details
+          x-show="!query || '{{ family.name|lower|escapejs }}'.includes(query.toLowerCase()) || '{{ family.help|lower|escapejs }}'.includes(query.toLowerCase())"
+          class="group p-3.5 hover:bg-slate-50/70 dark:hover:bg-slate-800/30"
+        >
+          <summary class="flex flex-wrap items-center justify-between gap-2 cursor-pointer list-none">
+            <div class="flex items-center gap-2">
+              <span class="font-mono text-xs font-bold text-slate-900 dark:text-slate-100">{{ family.name }}</span>
+              <span class="rounded bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-700 dark:text-slate-300">{{ family.type }}</span>
+            </div>
+            <span class="text-xs text-slate-500 dark:text-slate-400">
+              {{ family.sample_count }} sample{{ family.sample_count|pluralize }}
+              <span class="inline-block ml-1 transition-transform group-open:rotate-90">▶</span>
+            </span>
+          </summary>
+
+          {% if family.help %}
+            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ family.help }}</p>
+          {% endif %}
+
+          <div class="mt-2.5 max-h-52 overflow-y-auto rounded-lg bg-slate-100 dark:bg-slate-900/80 p-2.5 space-y-1 font-mono text-[11px]">
+            {% for s in family.samples %}
+              <div class="flex items-baseline justify-between gap-4">
+                <span class="text-slate-600 dark:text-slate-400 break-all">{{ s.labels_str }}</span>
+                <span class="font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap">{{ s.value }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        </details>
+      {% endfor %}
+    </div>
+  </div>
+{% endif %}

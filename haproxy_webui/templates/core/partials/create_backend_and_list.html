@@ -1,0 +1,95 @@
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <!-- Backends List (2 cols on large screens) -->
+  <div class="lg:col-span-2" id="backends-list-container">
+    {% include "core/partials/backends_list.html" %}
+  </div>
+
+  <!-- Create Backend Card -->
+  <section aria-labelledby="create-backend-heading" class="surface-card rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800 p-6 self-start">
+    <h2 id="create-backend-heading" class="text-lg font-bold text-slate-900 dark:text-slate-100 mb-1">
+      Create Backend
+    </h2>
+    <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">
+      Registers a new backend in both HAProxy Data Plane API and MariaDB.
+    </p>
+
+    {% if feedback %}
+      <div
+        role="alert"
+        class="mb-4 rounded-xl px-3.5 py-2.5 text-xs font-medium border {% if feedback.type == 'success' %}border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200{% else %}border-red-300 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/60 dark:text-red-200{% endif %}"
+      >
+        {{ feedback.text }}
+      </div>
+    {% endif %}
+
+    <form
+      method="post"
+      action="{% url 'backend_create' %}"
+      hx-post="{% url 'backend_create' %}"
+      hx-target="#backends-and-create"
+      hx-swap="innerHTML"
+      class="space-y-4"
+    >
+      {% csrf_token %}
+      <div>
+        <label for="id_be_name" class="block text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300 mb-1">
+          Backend Name *
+        </label>
+        <input
+          id="id_be_name"
+          type="text"
+          name="name"
+          value="{{ create_backend_form.name.value|default:'' }}"
+          placeholder="e.g., api_be"
+          required
+          class="form-input-field"
+        >
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label for="id_be_mode" class="block text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300 mb-1">
+            Mode
+          </label>
+          <select id="id_be_mode" name="mode" class="form-input-field">
+            {% for val, label in create_backend_form.fields.mode.choices %}
+              <option value="{{ val }}" {% if create_backend_form.mode.value == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label for="id_be_algo" class="block text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300 mb-1">
+            Algorithm
+          </label>
+          <select id="id_be_algo" name="balance_algorithm" class="form-input-field">
+            {% for val, label in create_backend_form.fields.balance_algorithm.choices %}
+              <option value="{{ val }}" {% if create_backend_form.balance_algorithm.value == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label for="id_be_desc" class="block text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300 mb-1">
+          Description (optional)
+        </label>
+        <input
+          id="id_be_desc"
+          type="text"
+          name="description"
+          value="{{ create_backend_form.description.value|default:'' }}"
+          placeholder="Optional note about this backend"
+          class="form-input-field"
+        >
+      </div>
+
+      <button
+        type="submit"
+        class="w-full inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 transition cursor-pointer"
+      >
+        + Create Backend
+      </button>
+    </form>
+  </section>
+</div>

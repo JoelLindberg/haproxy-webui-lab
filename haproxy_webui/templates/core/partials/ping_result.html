@@ -1,0 +1,17 @@
+<div class="terminal-surface mt-3 rounded-xl p-4 font-mono text-xs shadow-inner">
+  <div class="flex flex-wrap items-center gap-4 mb-2">
+    <div>
+      <span class="text-teal-400 font-bold">HTTP Status:</span>
+      <span class="{% if ping.ok %}text-emerald-400{% else %}text-rose-400{% endif %} font-semibold">{{ ping.status_code }}</span>
+    </div>
+    <div>
+      <span class="text-teal-400 font-bold">Latency:</span>
+      <span class="text-amber-300">{{ ping.latency_ms }} ms</span>
+    </div>
+    <div>
+      <span class="text-teal-400 font-bold">Time:</span>
+      <span class="text-slate-300">{{ ping.timestamp }}</span>
+    </div>
+  </div>
+  <pre class="mt-2 rounded-lg bg-zinc-950/80 p-3 overflow-x-auto border-l-2 border-indigo-500 text-zinc-200">{{ formatted_json }}</pre>
+</div>

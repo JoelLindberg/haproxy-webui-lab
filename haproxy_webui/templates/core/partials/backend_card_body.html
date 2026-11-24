@@ -1,0 +1,92 @@
+{% load humanize %}
+{% if error %}
+  <div class="rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-900 dark:border-amber-800/70 dark:bg-amber-950/50 dark:text-amber-200">
+    {{ error }}
+  </div>
+{% elif details and not details.exists_in_haproxy %}
+  <div class="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 p-4 text-xs text-slate-500 dark:text-slate-400">
+    Backend exists in MariaDB but is not currently present in HAProxy configuration.
+  </div>
+{% elif details %}
+  <div class="flex flex-wrap items-center gap-4 text-xs mb-3 text-slate-600 dark:text-slate-300">
+    <div>
+      <span class="text-slate-400">Status:</span>
+      {% if details.status == "UP" %}
+        <span class="badge-status-up ml-1">UP</span>
+      {% elif details.status == "DOWN" %}
+        <span class="badge-status-down ml-1">DOWN</span>
+      {% else %}
+        <span class="badge-status-unknown ml-1">{{ details.status }}</span>
+      {% endif %}
+    </div>
+    <div><span class="text-slate-400">Algorithm:</span> <strong class="font-mono">{{ details.algorithm }}</strong></div>
+    <div><span class="text-slate-400">Active Sessions:</span> <strong class="font-mono">{{ details.current_sessions|intcomma }}</strong></div>
+    <div><span class="text-slate-400">Rate:</span> <strong class="font-mono">{{ details.session_rate }}/s</strong></div>
+    <div><span class="text-slate-400">Traffic Out:</span> <strong class="font-mono">{{ details.bytes_out_human }}</strong></div>
+  </div>
+
+  {% if not servers %}
+    <div class="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 py-4 px-4 text-center text-xs text-slate-500 dark:text-slate-400">
+      No servers configured in this backend yet. <a href="{% url 'backend_edit' backend.name %}" class="text-indigo-600 dark:text-indigo-400 underline font-medium">Add a server</a>.
+    </div>
+  {% else %}
+    <div tabindex="0" role="region" aria-label="Servers in {{ backend.name }}" class="table-wrapper rounded-xl border border-slate-200 dark:border-slate-800">
+      <table
+        class="responsive-data-table w-full text-xs text-left"
+        style="--label-2: 'Endpoint'; --label-3: 'Status'; --label-4: 'State'; --label-5: 'Sessions'; --label-6: 'Total';"
+      >
+        <thead class="uppercase bg-slate-100 dark:bg-slate-800/90 text-slate-600 dark:text-slate-300">
+          <tr>
+            <th scope="col" class="px-3 py-2 font-semibold">Server</th>
+            <th scope="col" class="px-3 py-2 font-semibold">Endpoint</th>
+            <th scope="col" class="px-3 py-2 font-semibold">Status</th>
+            <th scope="col" class="px-3 py-2 font-semibold">State</th>
+            <th scope="col" class="px-3 py-2 font-semibold text-right">Active</th>
+            <th scope="col" class="px-3 py-2 font-semibold text-right">Total</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+          {% for srv in servers %}
+            <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+              <th scope="row" class="px-3 py-2 font-mono font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap">
+                {{ srv.name }}
+              </th>
+              <td class="px-3 py-2 font-mono text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                {{ srv.address }}:{{ srv.port }}
+              </td>
+              <td class="px-3 py-2 whitespace-nowrap">
+                {% if srv.operational_state == "up" %}
+                  <span class="badge-status-up">UP</span>
+                {% elif srv.operational_state == "stopping" %}
+                  <span class="badge-status-stopping">STOPPING</span>
+                {% elif srv.operational_state == "down" %}
+                  <span class="badge-status-down">DOWN</span>
+                {% else %}
+                  <span class="badge-status-unknown">{{ srv.operational_label }}</span>
+                {% endif %}
+              </td>
+              <td class="px-3 py-2 whitespace-nowrap">
+                {% if srv.admin_state == "ready" %}
+                  <span class="badge-state-ready">READY</span>
+                {% elif srv.admin_state == "drain" %}
+                  <span class="badge-state-drain">DRAIN</span>
+                {% elif srv.admin_state == "maint" %}
+                  <span class="badge-state-maint">MAINT</span>
+                {% else %}
+                  <span class="badge-status-unknown">{{ srv.admin_label }}</span>
+                {% endif %}
+              </td>
+              <td class="px-3 py-2 text-right font-mono font-semibold">
+                {{ srv.current_sessions|intcomma }}
+                {% if srv.queued_connections > 0 %}
+                  <span class="text-amber-600 dark:text-amber-400 ml-1">+{{ srv.queued_connections }}q</span>
+                {% endif %}
+              </td>
+              <td class="px-3 py-2 text-right font-mono">{{ srv.total_sessions|intcomma }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+{% endif %}

@@ -1,0 +1,375 @@
+<div class="surface-card rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800 p-6">
+  <div class="flex flex-wrap items-center justify-between gap-3 pb-5 mb-6 border-b border-slate-200 dark:border-slate-800">
+    <div>
+      <div class="flex items-center gap-3">
+        <h2 class="text-xl font-bold font-mono text-slate-900 dark:text-slate-100">
+          {{ backend.name }}
+        </h2>
+        <span class="rounded-md bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 text-xs font-semibold uppercase text-slate-600 dark:text-slate-300">
+          {{ backend.mode }}
+        </span>
+      </div>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+        Add or remove backend servers, rename nodes, or switch runtime state between Ready, Drain, and Maintenance.
+      </p>
+    </div>
+  </div>
+
+  {% if feedback %}
+    <div
+      x-data="{ show: true }"
+      x-show="show"
+      role="alert"
+      class="mb-6 flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium border {% if feedback.type == 'success' %}border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200{% else %}border-red-300 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/60 dark:text-red-200{% endif %}"
+    >
+      <span>{{ feedback.text }}</span>
+      <button type="button" @click="show = false" class="ml-4 text-xs opacity-70 hover:opacity-100 cursor-pointer" aria-label="Dismiss alert">✕</button>
+    </div>
+  {% endif %}
+
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <!-- Left Column: Server Controls + Create Server + Danger Zone -->
+    <div class="lg:col-span-5 space-y-6">
+      <!-- Quick Server Controls -->
+      <section aria-labelledby="manage-servers-heading" class="rounded-xl border border-slate-200 dark:border-slate-800 p-5">
+        <h3 id="manage-servers-heading" class="text-base font-bold text-slate-900 dark:text-slate-100 mb-3">
+          Server Maintenance Controls
+        </h3>
+
+        {% if not servers %}
+          <p class="text-xs text-slate-500 dark:text-slate-400 py-4 text-center border border-dashed border-slate-300 dark:border-slate-700 rounded-lg">
+            No servers configured in this backend. Add one below.
+          </p>
+        {% else %}
+          <div class="space-y-3">
+            {% for srv in servers %}
+              <div
+                x-data="{ renaming: false, newName: '{{ srv.name|escapejs }}' }"
+                class="rounded-xl border border-slate-200 dark:border-slate-800 p-3.5 bg-slate-50/60 dark:bg-slate-900/50"
+              >
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <span class="font-mono font-bold text-sm text-slate-900 dark:text-slate-100">{{ srv.name }}</span>
+                    <span class="text-xs font-mono text-slate-500 dark:text-slate-400 ml-1.5">{{ srv.address }}:{{ srv.port }}</span>
+                  </div>
+
+                  <div class="flex items-center gap-1.5">
+                    {% if srv.operational_state == "up" %}
+                      <span class="badge-status-up">UP</span>
+                    {% elif srv.operational_state == "stopping" %}
+                      <span class="badge-status-stopping">STOPPING</span>
+                    {% else %}
+                      <span class="badge-status-down">{{ srv.operational_label }}</span>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <!-- Runtime Admin State Segmented Buttons -->
+                <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
+                  <div class="inline-flex rounded-lg border border-slate-300 dark:border-slate-700 overflow-hidden text-xs font-semibold" role="group" aria-label="Runtime state for {{ srv.name }}">
+                    <form hx-post="{% url 'server_state' backend.name %}" hx-target="#backend-workspace" hx-swap="innerHTML">
+                      {% csrf_token %}
+                      <input type="hidden" name="server_name" value="{{ srv.name }}">
+                      <input type="hidden" name="admin_state" value="ready">
+                      <button
+                        type="submit"
+                        class="px-2.5 py-1.5 transition cursor-pointer {% if srv.admin_state == 'ready' %}bg-emerald-600 text-white{% else %}text-slate-700 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-800{% endif %}"
+                      >
+                        Ready
+                      </button>
+                    </form>
+                    <form hx-post="{% url 'server_state' backend.name %}" hx-target="#backend-workspace" hx-swap="innerHTML">
+                      {% csrf_token %}
+                      <input type="hidden" name="server_name" value="{{ srv.name }}">
+                      <input type="hidden" name="admin_state" value="drain">
+                      <button
+                        type="submit"
+                        class="px-2.5 py-1.5 border-x border-slate-300 dark:border-slate-700 transition cursor-pointer {% if srv.admin_state == 'drain' %}bg-amber-500 text-slate-950{% else %}text-slate-700 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-800{% endif %}"
+                      >
+                        Drain
+                      </button>
+                    </form>
+                    <form hx-post="{% url 'server_state' backend.name %}" hx-target="#backend-workspace" hx-swap="innerHTML">
+                      {% csrf_token %}
+                      <input type="hidden" name="server_name" value="{{ srv.name }}">
+                      <input type="hidden" name="admin_state" value="maint">
+                      <button
+                        type="submit"
+                        class="px-2.5 py-1.5 transition cursor-pointer {% if srv.admin_state == 'maint' %}bg-rose-600 text-white{% else %}text-slate-700 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-800{% endif %}"
+                      >
+                        Maint
+                      </button>
+                    </form>
+                  </div>
+
+                  <div class="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      @click="renaming = !renaming"
+                      class="rounded-lg border border-slate-300 dark:border-slate-700 px-2.5 py-1 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition cursor-pointer"
+                    >
+                      Rename
+                    </button>
+                    <button
+                      type="button"
+                      commandfor="del-srv-dialog-{{ forloop.counter }}"
+                      command="show-modal"
+                      class="rounded-lg border border-rose-300 dark:border-rose-800 px-2.5 py-1 text-xs font-medium text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/60 transition cursor-pointer"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Inline Rename Form -->
+                <form
+                  x-cloak
+                  x-show="renaming"
+                  hx-post="{% url 'server_rename' backend.name %}"
+                  hx-target="#backend-workspace"
+                  hx-swap="innerHTML"
+                  class="mt-3 pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2"
+                >
+                  {% csrf_token %}
+                  <input type="hidden" name="old_name" value="{{ srv.name }}">
+                  <label for="rename-input-{{ forloop.counter }}" class="sr-only">New server name</label>
+                  <input
+                    id="rename-input-{{ forloop.counter }}"
+                    type="text"
+                    name="new_name"
+                    x-model="newName"
+                    required
+                    class="form-input-field py-1.5 text-xs"
+                    placeholder="New server name"
+                  >
+                  <button
+                    type="submit"
+                    class="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 transition cursor-pointer whitespace-nowrap"
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    @click="renaming = false"
+                    class="rounded-lg border border-slate-300 dark:border-slate-700 px-2.5 py-1.5 text-xs text-slate-600 dark:text-slate-300 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </form>
+
+                <!-- Native Modal Confirmation Dialog for Server Deletion -->
+                <dialog
+                  id="del-srv-dialog-{{ forloop.counter }}"
+                  aria-labelledby="del-srv-title-{{ forloop.counter }}"
+                  closedby="any"
+                  class="modal-dialog rounded-2xl p-6 max-w-md w-full shadow-2xl border border-slate-200 dark:border-slate-700"
+                >
+                  <h1 id="del-srv-title-{{ forloop.counter }}" class="text-lg font-bold text-slate-900 dark:text-slate-100">
+                    Remove server "{{ srv.name }}"?
+                  </h1>
+                  <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                    This permanently deletes <strong class="font-mono">{{ srv.name }}</strong> ({{ srv.address }}:{{ srv.port }}) from backend <strong class="font-mono">{{ backend.name }}</strong> in HAProxy.
+                  </p>
+                  <div class="mt-5 flex items-center justify-end gap-2.5">
+                    <button
+                      type="button"
+                      commandfor="del-srv-dialog-{{ forloop.counter }}"
+                      command="close"
+                      autofocus
+                      class="rounded-lg border border-slate-300 dark:border-slate-700 px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <form
+                      method="post"
+                      action="{% url 'server_delete' backend.name %}"
+                      hx-post="{% url 'server_delete' backend.name %}"
+                      hx-target="#backend-workspace"
+                      hx-swap="innerHTML"
+                    >
+                      {% csrf_token %}
+                      <input type="hidden" name="server_name" value="{{ srv.name }}">
+                      <button
+                        type="submit"
+                        class="rounded-lg bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-500 transition cursor-pointer"
+                      >
+                        Delete Server
+                      </button>
+                    </form>
+                  </div>
+                </dialog>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </section>
+
+      <!-- Create Server Form -->
+      <section aria-labelledby="create-server-heading" class="rounded-xl border border-slate-200 dark:border-slate-800 p-5">
+        <h3 id="create-server-heading" class="text-base font-bold text-slate-900 dark:text-slate-100 mb-3">
+          Add Server to Backend
+        </h3>
+        <form
+          method="post"
+          action="{% url 'server_create' backend.name %}"
+          hx-post="{% url 'server_create' backend.name %}"
+          hx-target="#backend-workspace"
+          hx-swap="innerHTML"
+          class="space-y-3.5"
+        >
+          {% csrf_token %}
+          <div>
+            <label for="id_srv_name" class="block text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300 mb-1">
+              Server Name *
+            </label>
+            <input
+              id="id_srv_name"
+              type="text"
+              name="name"
+              value="{{ create_server_form.name.value|default:'' }}"
+              placeholder="e.g., app3"
+              required
+              class="form-input-field"
+            >
+          </div>
+
+          <div class="grid grid-cols-3 gap-3">
+            <div class="col-span-2">
+              <label for="id_srv_address" class="block text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300 mb-1">
+                Address *
+              </label>
+              <input
+                id="id_srv_address"
+                type="text"
+                name="address"
+                value="{{ create_server_form.address.value|default:'' }}"
+                placeholder="http-echo1 or 10.0.0.10"
+                required
+                class="form-input-field"
+              >
+            </div>
+            <div>
+              <label for="id_srv_port" class="block text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300 mb-1">
+                Port *
+              </label>
+              <input
+                id="id_srv_port"
+                type="number"
+                name="port"
+                min="1"
+                max="65535"
+                value="{{ create_server_form.port.value|default:'80' }}"
+                required
+                class="form-input-field"
+              >
+            </div>
+          </div>
+
+          <div>
+            <label for="id_srv_check" class="block text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300 mb-1">
+              Health Check
+            </label>
+            <select id="id_srv_check" name="check" class="form-input-field">
+              <option value="enabled" {% if create_server_form.check.value != 'disabled' %}selected{% endif %}>Enabled</option>
+              <option value="disabled" {% if create_server_form.check.value == 'disabled' %}selected{% endif %}>Disabled</option>
+            </select>
+          </div>
+
+          <button
+            type="submit"
+            class="w-full inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 transition cursor-pointer"
+          >
+            + Add Server
+          </button>
+        </form>
+      </section>
+
+      <!-- Danger Zone: Delete Backend -->
+      <section aria-labelledby="danger-zone-heading" class="rounded-xl border-2 border-rose-300 dark:border-rose-900 bg-rose-50/50 dark:bg-rose-950/20 p-5">
+        <h3 id="danger-zone-heading" class="text-base font-bold text-rose-700 dark:text-rose-400">
+          Danger Zone
+        </h3>
+        <p class="mt-1 text-xs text-slate-600 dark:text-slate-300">
+          Permanently remove backend <strong class="font-mono">{{ backend.name }}</strong> and all of its servers from HAProxy and MariaDB.
+        </p>
+        <button
+          type="button"
+          commandfor="delete-backend-dialog"
+          command="show-modal"
+          class="mt-3 inline-flex items-center rounded-lg bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-500 transition cursor-pointer"
+        >
+          Delete Backend…
+        </button>
+
+        <dialog
+          id="delete-backend-dialog"
+          aria-labelledby="delete-backend-modal-title"
+          closedby="closerequest"
+          x-data="{ confirmText: '' }"
+          class="modal-dialog rounded-2xl p-6 max-w-md w-full shadow-2xl border border-slate-200 dark:border-slate-700"
+        >
+          <h1 id="delete-backend-modal-title" class="text-lg font-bold text-rose-700 dark:text-rose-400">
+            Delete backend "{{ backend.name }}"?
+          </h1>
+          <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+            This action cannot be undone. Type <strong class="font-mono text-slate-900 dark:text-slate-100">{{ backend.name }}</strong> below to confirm deletion.
+          </p>
+
+          <form
+            method="post"
+            action="{% url 'backend_delete' backend.name %}"
+            hx-post="{% url 'backend_delete' backend.name %}"
+            hx-target="#backend-workspace"
+            class="mt-4 space-y-4"
+          >
+            {% csrf_token %}
+            <div>
+              <label for="id_confirm_backend_name" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Confirm Backend Name
+              </label>
+              <input
+                id="id_confirm_backend_name"
+                type="text"
+                name="confirm_name"
+                x-model="confirmText"
+                autocomplete="off"
+                placeholder="{{ backend.name }}"
+                class="form-input-field font-mono"
+              >
+            </div>
+
+            <div class="flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                commandfor="delete-backend-dialog"
+                command="close"
+                autofocus
+                class="rounded-lg border border-slate-300 dark:border-slate-700 px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                :disabled="confirmText !== '{{ backend.name|escapejs }}'"
+                class="rounded-lg bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-500 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+              >
+                Permanently Delete
+              </button>
+            </div>
+          </form>
+        </dialog>
+      </section>
+    </div>
+
+    <!-- Right Column: Live Backend Details & Server Traffic Table -->
+    <div class="lg:col-span-7">
+      <div
+        id="backend-live-panel"
+        hx-get="{% url 'partial_backend_live' backend.name %}"
+        hx-trigger="every 5s [!document.hidden]"
+      >
+        {% include "core/partials/backend_live_details.html" %}
+      </div>
+    </div>
+  </div>
+</div>

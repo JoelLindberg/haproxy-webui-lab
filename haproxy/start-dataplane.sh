@@ -9,5 +9,5 @@ OUT="/usr/local/etc/haproxy/dataplaneapi.yml"
 # Render template with environment variable
 envsubst < "$TEMPLATE" > "$OUT"
 
-# Start the original s6 init system (preserve the base image behavior)
-exec /init
+# Start the original base image entrypoint
+exec /start.sh "$@"

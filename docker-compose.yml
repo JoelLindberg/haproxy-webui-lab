@@ -23,7 +23,6 @@ services:
       - "8888:80"
       - "5555:5555"  # Port for HAProxy Data Plane API
       - "8405:8405"  # Port for HAProxy Prometheus metrics
-      - "3307:3307"  # Port for MariaDB access through HAProxy
     environment:
       DATAPLANE_PASSWORD: ${DATAPLANE_PASSWORD}
     networks:
@@ -40,7 +39,7 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - mariadb_data:/var/lib/mysql
+      - haproxy_webui_mariadb_data:/var/lib/mysql
     networks:
       - haproxy-net
     healthcheck:
@@ -48,11 +47,9 @@ services:
       timeout: 20s
       retries: 10
       interval: 10s
-    depends_on:
-      - haproxy
 
 volumes:
-  mariadb_data:
+  haproxy_webui_mariadb_data:
 
 networks:
   haproxy-net:
